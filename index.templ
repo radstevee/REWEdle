@@ -1,0 +1,99 @@
+package main
+
+import "fmt"
+
+templ row(state REWEdleState, idx int) {
+	<div class="flex flex-row items-center gap-x-2">
+		<input
+			type="text"
+			name="guess"
+			class="bg-white px-2 py-1 rounded w-96"
+      autocomplete="off"
+			value={ state.Guesses[idx] }
+			disabled?={ state.Guesses[idx] != "" || state.Finished }
+		/>
+		if result := state.GuessResults[idx]; result != nil {
+			<div class={ "text-white px-2 py-1 rounded " + state.GuessResultRanges[idx].Color }>
+				if *result == Higher {
+					&uarr;
+				} else if *result == Correct {
+					&#10003;
+				} else if *result == Lower {
+					&darr;
+				}
+			</div>
+		}
+	</div>
+}
+
+templ content(state REWEdleState) {
+	<div class="mx-auto flex flex-col max-w-lg items-center gap-y-4 rounded-xl bg-slate-300 p-6 mt-12 shadow-lg outline outline-black/5">
+		<img src={ state.Product.ImageURL } class="max-w-3xs max-h-3xs"/>
+		<div class="pt-12 font-semibold text-center">{ state.Product.Title }</div>
+		<div id="input" class="bg-slate-500 input w-full p-4 rounded flex flex-col gap-y-2">
+			<form hx-post="/guess" hx-select="#input" hx-target="#input" hx-swap="outerHTML" class="flex flex-col gap-y-2 h-full">
+				@row(state, 0)
+				@row(state, 1)
+				@row(state, 2)
+				@row(state, 3)
+
+				if state.Finished && !state.Guessed {
+					<div class="text-center font-bold pt-4 text-black">
+						{ fmt.Sprintf("%.2f€", float64(state.Product.Listing.CurrentRetailPrice) / 100.0) }
+					</div>
+				}
+
+				<div class="pt-4 flex justify-center mt-auto">
+					<button type="submit" class="px-4 py-2 cursor-pointer transition duration-200 bg-blue-600 hover:bg-blue-800 text-white rounded">Submit</button>
+          if state.Finished {
+            <button type="button" onclick="shareResults()" class="ml-4 px-4 py-2 cursor-pointer transition duration-200 bg-green-700 hover:bg-green-900 text-white rounded">Share</button>
+            <div id="share-data" class="hidden">
+              {
+                jsonMarshal(state)
+              }
+            </div>
+          }
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+templ index(state REWEdleState) {
+	<!DOCTYPE html>
+	<head>
+		<title>REWEdle</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+		<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js"></script>
+		<script>
+      function shareResults() {
+        // cursed but who the fuck cares
+        const guesses = JSON.parse(document.getElementById("share-data").textContent);
+        const mapColor = {
+          "bg-red-500": "🔴",
+          "bg-orange-600": "🟠",
+          "bg-yellow-500": "🟡",
+          "bg-green-600": "🟢"
+        };
+        const mapResult = {
+          "Higher": "⬆️",
+          "Lower": "⬇️",
+          "Correct": "✅"
+        };
+
+        const rows = guesses.map(g => {
+          return `${mapColor[g.color] ?? "⬛"} ${mapResult[g.result] ?? "❓"} ${g.guess}`;
+        });
+
+        const shareText = `🛒 REWEdle\n\n${rows.join("\n")}`;
+        navigator.clipboard.writeText(shareText).then(() => {
+          alert("Copied to clipboard!");
+        });
+      }
+    </script>
+	</head>
+	<body class="bg-gray-950">
+		@content(state)
+	</body>
+}
