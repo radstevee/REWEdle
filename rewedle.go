@@ -40,21 +40,21 @@ const (
 
 type GuessResultRange struct {
 	Color string
-	Start float32
-	End   float32
+	Start float64
+	End   float64
 }
 
 var (
 	Green GuessResultRange = GuessResultRange{
 		Color: "bg-green-600",
 		Start: 0.0,
-		End:   0.05,
+		End:   0.06,
 	}
 
 	Yellow = GuessResultRange{
 		Color: "bg-yellow-500",
 		Start: 0.06,
-		End:   0.1,
+		End:   0.11,
 	}
 
 	Orange = GuessResultRange{
@@ -66,7 +66,7 @@ var (
 	Red = GuessResultRange{
 		Color: "bg-red-500",
 		Start: 0.25,
-		End:   1.0,
+		End:   1.01,
 	}
 
 	ResultRanges = [4]GuessResultRange{Green, Yellow, Orange, Red}
@@ -77,7 +77,7 @@ func GetGuessRange(guess, actual float64) GuessResultRange {
 	relativeError := diff / float64(actual)
 
 	for _, r := range ResultRanges {
-		if relativeError >= float64(r.Start) && relativeError <= float64(r.End) {
+		if relativeError >= r.Start && relativeError < r.End {
 			return r
 		}
 	}
