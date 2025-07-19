@@ -69,7 +69,7 @@ var (
 		End:   1.0,
 	}
 
-	ResultRanges = [4]GuessResultRange{Red, Orange, Yellow, Green}
+	ResultRanges = [4]GuessResultRange{Green, Yellow, Orange, Red}
 )
 
 func GetGuessRange(guess, actual float64) GuessResultRange {
