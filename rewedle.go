@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand/v2"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -20,11 +21,13 @@ var (
 	market   rewerse.Market
 	product  rewerse.Product
 	sessions *scs.SessionManager
+	counter  int
 	log      = l.Default()
 )
 
 const (
-	sessionKey = "rwdl-state"
+	sessionKey      = "rwdl-state"
+	counterFileName = "current-rewedle"
 )
 
 type GuessResult int
@@ -164,7 +167,6 @@ func handleGuess(w http.ResponseWriter, r *http.Request) {
 				result = Correct
 				state.Finished = true
 				state.Guessed = true
-				state.Guesses[idx] = fmt.Sprintf("%.2f€", price)
 			}
 
 			state.GuessResults[idx] = &result
@@ -183,9 +185,9 @@ func handleGuess(w http.ResponseWriter, r *http.Request) {
 
 func jsonMarshal(state REWEdleState) string {
 	type shareItem struct {
-		Color  string `json:"color"`
-		Result string `json:"result"`
-		Guess  string `json:"guess"`
+		Color   string `json:"color"`
+		Result  string `json:"result"`
+		Counter int    `json:"counter"`
 	}
 
 	var result []shareItem
@@ -201,9 +203,9 @@ func jsonMarshal(state REWEdleState) string {
 				res = "Correct"
 			}
 			result = append(result, shareItem{
-				Color:  state.GuessResultRanges[idx].Color,
-				Result: res,
-				Guess:  state.Guesses[idx],
+				Color:   state.GuessResultRanges[idx].Color,
+				Result:  res,
+				Counter: counter,
 			})
 		}
 	}
@@ -212,15 +214,45 @@ func jsonMarshal(state REWEdleState) string {
 }
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {
-	// state := GetState(r.Context())
-	// // If the user's last played product is outdated, reset the state
-	// if state.Product.ArticleID != product.ArticleID {
-	// 	state = MakeState()
-	// }
 	state := MakeState()
 	SaveState(r.Context(), state)
 
 	index(state).Render(r.Context(), w)
+}
+
+func incrementCounter() error {
+	if _, err := os.Stat(counterFileName); os.IsNotExist(err) {
+		err = os.WriteFile(counterFileName, []byte("1"), 0644)
+		counter = 1
+		if err != nil {
+			return fmt.Errorf("failed to create file: %v", err)
+		}
+		return nil
+	}
+
+	data, err := os.ReadFile(counterFileName)
+	if err != nil {
+		counter = 1
+		return fmt.Errorf("failed to read file: %v", err)
+	}
+
+	trimmed := strings.TrimSpace(string(data))
+	current, err := strconv.Atoi(trimmed)
+	if err != nil {
+		counter = 1
+		return fmt.Errorf("invalid number in file: %v", err)
+	}
+
+	current++
+	err = os.WriteFile(counterFileName, []byte(strconv.Itoa(current)), 0644)
+	if err != nil {
+		counter = 1
+		return fmt.Errorf("failed to write file: %v", err)
+	}
+
+	counter = current
+
+	return nil
 }
 
 func main() {
@@ -266,6 +298,10 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleIndex)
 	mux.HandleFunc("/guess", handleGuess)
+
+	if err := incrementCounter(); err != nil {
+		log.Fatal("failed incrementing counter: ", err)
+	}
 
 	if err := http.ListenAndServe("0.0.0.0:8080", sessions.LoadAndSave(mux)); err != nil {
 		log.Fatal(err)
