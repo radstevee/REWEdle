@@ -84,7 +84,7 @@ templ index(state REWEdleState) {
           return `${colors[g.color] ?? "⬛"} ${result[g.result] ?? "❓"}`;
         });
 
-        const shareText = `🛒 REWEdle #${guesses[0].counter}\n\n${rows.join("\n")}`;
+        const shareText = `🛒 REWEdle #${guesses[0].counter}\n\n${rows.join("\n")}\n\nhttps://rewedle.radsteve.net`;
         navigator.clipboard.writeText(shareText).then(() => {
           alert("Copied to clipboard!");
         });
