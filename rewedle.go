@@ -263,7 +263,7 @@ func main() {
 
 	// The author of rewerse was a bit silly and hardcoded their zip code
 	// which requires us to use markets in Ludwigshafen lmao
-	markets, err := rewerse.MarketSearch("Ludwigshafen")
+	markets, err := rewerse.MarketSearch("67065 Ludwigshafen")
 	if err != nil {
 		log.Fatal("could not find markets in ludwigshafen: ", err)
 	}
